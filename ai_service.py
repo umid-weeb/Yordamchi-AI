@@ -22,27 +22,17 @@ ZAXIRA_MODEL  = "llama3-8b-8192"
 VISION_MODEL  = "llama-3.2-11b-vision-preview"
 WHISPER_MODEL = "whisper-large-v3-turbo"
 
-# Updated Groq client initialization
-def _create_groq_client(api_key):
-    try:
-        return Groq(api_key=api_key)
-    except TypeError as e:
-        if "proxies" in str(e):
-            # Handle older Groq versions
-            return Groq(api_key=api_key, version="0.11.0")
-        raise
-
 REJIMLAR = {
     "assistant": {
         "nomi":   "Umumiy Yordamchi",
         "emoji":  "🤖",
-        "tavsif": "Har qanday savolga aniq javob beraman",
+        "tavsif": "Har qanday savolga aniq javob beradi",
         "prompt": (
-            "Siz Yordamchi AI — aqlli va foydali shaxsiy yordamchisiz. "
-            "Har qanday savolga aniq, tushunarli va to'liq javob beraman. "
-            "Foydalanuvchi qaysi tilda yozsa — o'sha tilda javob beraman. "
+            "Siz MUSE AI — aqlli va foydali shaxsiy yordamchisiz. "
+            "Har qanday savolga aniq, tushunarli va to'liq javob bering. "
+            "Foydalanuvchi qaysi tilda yozsa — o'sha tilda javob bering. "
             "O'zbek → o'zbekcha, Rus → ruscha, Ingliz → inglizcha. "
-            "Javoblar qisqa, aniq va foydali bo'lishiga harakat qilaman."
+            "Javoblar qisqa, aniq va foydali bo'lsin."
         ),
     },
     "ijod": {
@@ -78,16 +68,6 @@ REJIMLAR = {
             "Foydalanuvchi tilida javob bering."
         ),
     },
-    "xamroh_ai": {
-        "nomi":   "Xamroh AI",
-        "emoji":  "💖",
-        "tavsif": "Yaqin do'st bo'lib, yordam beraman",
-        "prompt": (
-            "Siz Xamroh AI — yaqin do'st bo'lib, yordam beruvchi xushmuomala inson bo'lisiz. "
-            "Foydalanuvchi bilan do'st bo'lib, qo'shimcha ma'lumotlar so'rab, samimiy va foydali javoblar berasiz. "
-            "Foydalanuvchi tilida javob bering."
-        ),
-    },
 }
 
 XOTIRA_KATEGORIYALARI = ["shaxsiy", "ish", "maqsad", "uslub", "til", "qiziqish"]
@@ -113,7 +93,7 @@ def _qayta_urinish(fn, max_urinish=3):
 
 class AIService:
     def __init__(self, api_key: str):
-        self.client = _create_groq_client(api_key)
+        self.client = Groq(api_key=api_key)
         self.model  = ASOSIY_MODEL
         logger.info(f"Groq AI tayyor: {self.model}")
 
@@ -150,8 +130,7 @@ class AIService:
         if m:
             # Tegni va atrofidagi bo'sh joylarni o'chiramiz
             toza = re.sub(pattern, "", matn).strip()
-            # Oxiridagi b
-            # o'sh qatorlarni ham tozalaymiz
+            # Oxiridagi bo'sh qatorlarni ham tozalaymiz
             toza = re.sub(r'\n\s*\n\s*$', '', toza).strip()
             return toza, {"category": m.group(1).strip(), "content": m.group(2).strip()}
         return matn, None
@@ -210,28 +189,18 @@ class AIService:
         data_url = f"data:{mime};base64,{b64}"
 
         def chaqir():
-            try:
-                j = self.client.chat.completions.create(
-                    model=VISION_MODEL,
-                    messages=[
-                        {"role": "system", "content": tizim},
-                        {"role": "user", "content": [
-                            {"type": "image_url", "image_url": {"url": data_url}},
-                            {"type": "text", "text": savol},
-                        ]},
-                    ],
-                    max_tokens=1500, temperature=0.7,
-                )
-                return j.choices[0].message.content.strip()
-            except Exception as e:
-                if "model" in str(e).lower() and "decommissioned" in str(e).lower():
-                    logger.warning(f"Vision model {VISION_MODEL} decommissioned. Using text fallback.")
-                    return (
-                        "Rasmni ko'rdim, lekin tahlil qilishda muammo bo'ldi.\n"
-                        "Iltimos rasm haqida qisqacha tasvirlab bering — "
-                        "keyin batafsil javob beraman!"
-                    )
-                raise
+            j = self.client.chat.completions.create(
+                model=VISION_MODEL,
+                messages=[
+                    {"role": "system", "content": tizim},
+                    {"role": "user", "content": [
+                        {"type": "image_url", "image_url": {"url": data_url}},
+                        {"type": "text", "text": savol},
+                    ]},
+                ],
+                max_tokens=1500, temperature=0.7,
+            )
+            return j.choices[0].message.content.strip()
 
         try:
             javob = _qayta_urinish(chaqir)
