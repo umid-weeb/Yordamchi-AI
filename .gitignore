@@ -1,0 +1,23 @@
+# Maxfiy fayllar
+.env
+
+
+# Ma'lumotlar bazasi
+*.db
+*.sqlite3
+
+# Loglar
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp.env
